@@ -15,10 +15,8 @@ def create_board():
     board = [[EMPTY] * SIZE for _ in range(SIZE)]
     mid = SIZE // 2
 
-  
     board[mid][mid] = KING
 
-    
     defenders = [
         (mid-1, mid), (mid+1, mid), (mid, mid-1), (mid, mid+1),
         (mid-2, mid), (mid+2, mid), (mid, mid-2), (mid, mid+2),
@@ -27,66 +25,95 @@ def create_board():
     for r, c in defenders:
         board[r][c] = DEFENDER
 
- 
     for i in range(SIZE):
         if i != mid:
-            board[0][i] = ATTACKER
-            board[SIZE-1][i] = ATTACKER
-            board[i][0] = ATTACKER
-            board[i][SIZE-1] = ATTACKER
+            if (0, i) not in CORNERS:
+                board[0][i] = ATTACKER
+            if (SIZE - 1, i) not in CORNERS:
+                board[SIZE - 1][i] = ATTACKER
+            if (i, 0) not in CORNERS:
+                board[i][0] = ATTACKER
+            if (i, SIZE - 1) not in CORNERS:
+                board[i][SIZE - 1] = ATTACKER
+
     for r, c in CORNERS:
         board[r][c] = CORNER
 
     return board
+
 
 def print_board(board):
     print("   " + " ".join(str(i) for i in range(SIZE)))
     for i, row in enumerate(board):
         print(f"{i}  " + " ".join(row))
     print()
+
+
 def is_valid_move(board, player, r, c, nr, nc):
     if not (0 <= r < SIZE and 0 <= c < SIZE and 0 <= nr < SIZE and 0 <= nc < SIZE):
         return False, "Out of bounds"
+
     piece = board[r][c]
+
     if player == ATTACKER and piece != ATTACKER:
         return False, "Not your piece"
     if player == DEFENDER and piece not in [DEFENDER, KING]:
         return False, "Not your piece"
+
     if (r, c) == (nr, nc):
         return False, "Same position"
+
     if r != nr and c != nc:
         return False, "Must move straight"
-    if board[nr][nc] != EMPTY:
-        return False, "Target not empty"
+
+    if (nr, nc) in CORNERS:
+        if piece != KING:
+            return False, "Only king can enter corners"
+    else:
+        if board[nr][nc] != EMPTY:
+            return False, "Target not empty"
+
     if (nr, nc) == THRONE_POS and piece != KING:
         return False, "Only king can enter throne"
-    if (nr, nc) in CORNERS:
-        return False, "Cannot move into corner"
+
     dr = 0 if nr == r else (1 if nr > r else -1)
     dc = 0 if nc == c else (1 if nc > c else -1)
+
     cr, cc = r + dr, c + dc
     while (cr, cc) != (nr, nc):
         if board[cr][cc] != EMPTY:
             return False, "Path blocked"
         cr += dr
         cc += dc
+
     return True, "Valid"
+
+
 def get_moves(board, r, c):
     moves = []
     piece = board[r][c]
+
     for dr, dc in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
         nr, nc = r + dr, c + dc
         while 0 <= nr < SIZE and 0 <= nc < SIZE:
             if board[nr][nc] != EMPTY:
                 break
+
             if (nr, nc) == THRONE_POS and piece != KING:
                 break
+
             if (nr, nc) in CORNERS:
+                if piece == KING:
+                    moves.append((nr, nc))
                 break
+
             moves.append((nr, nc))
             nr += dr
             nc += dc
+
     return moves
+
+
 if __name__ == "__main__":
-    b = create_board()
-    print_board(b)
+    board = create_board()
+    print_board(board)
