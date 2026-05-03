@@ -6,9 +6,9 @@ DEFENDER = 'D'
 KING = 'K'
 CORNER = 'X'
 
-SIZE = 9
+SIZE = 11
 THRONE_POS = (SIZE // 2, SIZE // 2)
-CORNERS = [(0, 0), (0, 8), (8, 0), (8, 8)]
+CORNERS = [(0, 0), (0, SIZE-1), (SIZE-1, 0), (SIZE-1, SIZE-1)]
 
 
 def create_board():
@@ -20,21 +20,28 @@ def create_board():
     defenders = [
         (mid-1, mid), (mid+1, mid), (mid, mid-1), (mid, mid+1),
         (mid-2, mid), (mid+2, mid), (mid, mid-2), (mid, mid+2),
-        (mid-1, mid-1), (mid-1, mid+1), (mid+1, mid-1), (mid+1, mid+1)
+
+        (mid-1, mid-1), (mid-1, mid+1),
+        (mid+1, mid-1), (mid+1, mid+1),
     ]
     for r, c in defenders:
         board[r][c] = DEFENDER
 
-    for i in range(SIZE):
-        if i != mid:
-            if (0, i) not in CORNERS:
-                board[0][i] = ATTACKER
-            if (SIZE - 1, i) not in CORNERS:
-                board[SIZE - 1][i] = ATTACKER
-            if (i, 0) not in CORNERS:
-                board[i][0] = ATTACKER
-            if (i, SIZE - 1) not in CORNERS:
-                board[i][SIZE - 1] = ATTACKER
+    attackers = [
+        (0, mid-2),(0, mid-1),(0, mid),(0, mid+1),(0, mid+2),
+        (1, mid),
+
+        (SIZE-1, mid-2),(SIZE-1, mid-1),(SIZE-1, mid),(SIZE-1, mid+1),(SIZE-1, mid+2),
+        (SIZE-2, mid),
+
+        (mid-2, 0),(mid-1, 0),(mid, 0),(mid+1, 0),(mid+2, 0),
+        (mid, 1),
+
+        (mid-2, SIZE-1),(mid-1, SIZE-1),(mid, SIZE-1),(mid+1, SIZE-1),(mid+2, SIZE-1),
+        (mid, SIZE-2)
+    ]
+    for r, c in attackers:
+        board[r][c] = ATTACKER
 
     for r, c in CORNERS:
         board[r][c] = CORNER
@@ -43,10 +50,18 @@ def create_board():
 
 
 def print_board(board):
-    print("   " + " ".join(str(i) for i in range(SIZE)))
+    # Header (column numbers)
+    print("    " + " ".join(f"{i:2}" for i in range(SIZE)))
+
+    # Top border
+    print("   +" + "--" * SIZE + "+")
+
+    # Rows
     for i, row in enumerate(board):
-        print(f"{i}  " + " ".join(row))
-    print()
+        print(f"{i:2} |" + " ".join(f"{cell:2}" for cell in row) + " |")
+
+    # Bottom border
+    print("   +" + "--" * SIZE + "+")
 
 
 def is_valid_move(board, player, r, c, nr, nc):
