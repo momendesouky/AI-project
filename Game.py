@@ -50,17 +50,17 @@ def create_board():
 
 
 def print_board(board):
-    # Header (column numbers)
+   
     print("    " + " ".join(f"{i:2}" for i in range(SIZE)))
 
-    # Top border
+    
     print("   +" + "--" * SIZE + "+")
 
-    # Rows
+    
     for i, row in enumerate(board):
         print(f"{i:2} |" + " ".join(f"{cell:2}" for cell in row) + " |")
 
-    # Bottom border
+   
     print("   +" + "--" * SIZE + "+")
 
 
