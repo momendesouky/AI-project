@@ -1,5 +1,5 @@
 import copy
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Dict
 
 EMPTY = '.'
 ATTACKER = 'A'
@@ -21,747 +21,753 @@ TT_UPPER = 2
 
 
 def create_board():
-    board = [[EMPTY] * SIZE for _ in range(SIZE)]
-    mid = SIZE // 2
+    board = [[EMPTY] * SIZE for _ in range(SIZE)]
+    mid = SIZE // 2
 
-    board[mid][mid] = KING
+    board[mid][mid] = KING
 
-    defenders = [
-        (mid - 1, mid), (mid + 1, mid), (mid, mid - 1), (mid, mid + 1),
-        (mid - 2, mid), (mid + 2, mid), (mid, mid - 2), (mid, mid + 2),
-        (mid - 1, mid - 1), (mid - 1, mid + 1),
-        (mid + 1, mid - 1), (mid + 1, mid + 1),
-    ]
-    for r, c in defenders:
-        board[r][c] = DEFENDER
+    defenders = [
+        (mid - 1, mid), (mid + 1, mid), (mid, mid - 1), (mid, mid + 1),
+        (mid - 2, mid), (mid + 2, mid), (mid, mid - 2), (mid, mid + 2),
+        (mid - 1, mid - 1), (mid - 1, mid + 1),
+        (mid + 1, mid - 1), (mid + 1, mid + 1),
+    ]
+    for r, c in defenders:
+        board[r][c] = DEFENDER
 
-    attackers = [
+    attackers = [
+        (0, mid - 2), (0, mid - 1), (0, mid), (0, mid + 1), (0, mid + 2),
+        (1, mid),
 
-        (0, mid - 2), (0, mid - 1), (0, mid), (0, mid + 1), (0, mid + 2),
-        (1, mid),
+        (SIZE - 1, mid - 2), (SIZE - 1, mid - 1), (SIZE - 1, mid), (SIZE - 1, mid + 1), (SIZE - 1, mid + 2),
+        (SIZE - 2, mid),
 
-        (SIZE - 1, mid - 2), (SIZE - 1, mid - 1), (SIZE - 1, mid), (SIZE - 1, mid + 1), (SIZE - 1, mid + 2),
-        (SIZE - 2, mid),
+        (mid - 2, 0), (mid - 1, 0), (mid, 0), (mid + 1, 0), (mid + 2, 0),
+        (mid, 1),
 
-        (mid - 2, 0), (mid - 1, 0), (mid, 0), (mid + 1, 0), (mid + 2, 0),
-        (mid, 1),
+        (mid - 2, SIZE - 1), (mid - 1, SIZE - 1), (mid, SIZE - 1), (mid + 1, SIZE - 1), (mid + 2, SIZE - 1),
+        (mid, SIZE - 2)
+    ]
+    for r, c in attackers:
+        board[r][c] = ATTACKER
 
-        (mid - 2, SIZE - 1), (mid - 1, SIZE - 1), (mid, SIZE - 1), (mid + 1, SIZE - 1), (mid + 2, SIZE - 1),
-        (mid, SIZE - 2)
-    ]
-    for r, c in attackers:
-        board[r][c] = ATTACKER
+    for r, c in CORNERS:
+        board[r][c] = CORNER
 
-    for r, c in CORNERS:
-        board[r][c] = CORNER
-
-    return board
+    return board
 
 
 def print_board(board):
-    print("    " + " ".join(f"{i:2}" for i in range(SIZE)))
-    print("   +" + "--" * SIZE + "+")
+    print("    " + " ".join(f"{i:2}" for i in range(SIZE)))
+    print("  +" + "--" * SIZE + "+")
 
-    for i, row in enumerate(board):
-        print(f"{i:2} |" + " ".join(f"{cell:2}" for cell in row) + " |")
+    for i, row in enumerate(board):
+        print(f"{i:2} |" + " ".join(f"{cell:2}" for cell in row) + " |")
 
-    print("   +" + "--" * SIZE + "+")
+    print("  +" + "--" * SIZE + "+")
 
 
 def is_valid_move(board, player, r, c, nr, nc):
-    # Check bounds
-    if not (0 <= r < SIZE and 0 <= c < SIZE and 0 <= nr < SIZE and 0 <= nc < SIZE):
-        return False, "Out of bounds"
+    # Check bounds
+    if not (0 <= r < SIZE and 0 <= c < SIZE and 0 <= nr < SIZE and 0 <= nc < SIZE):
+        return False, "Out of bounds"
 
-    piece = board[r][c]
+    piece = board[r][c]
 
-    if player == ATTACKER and piece != ATTACKER:
-        return False, "Not your piece"
-    if player == DEFENDER and piece not in [DEFENDER, KING]:
-        return False, "Not your piece"
+    if player == ATTACKER and piece != ATTACKER:
+        return False, "Not your piece"
+    if player == DEFENDER and piece not in [DEFENDER, KING]:
+        return False, "Not your piece"
 
-    if (r, c) == (nr, nc):
-        return False, "Same position"
+    if (r, c) == (nr, nc):
+        return False, "Same position"
 
-    if r != nr and c != nc:
-        return False, "Must move straight"
+    if r != nr and c != nc:
+        return False, "Must move straight"
 
-    if (nr, nc) in CORNERS:
-        if piece != KING:
-            return False, "Only king can enter corners"
-    else:
+    if (nr, nc) in CORNERS:
+        if piece != KING:
+            return False, "Only king can enter corners"
+    else:
+        if board[nr][nc] != EMPTY:
+            return False, "Target not empty"
 
-        if board[nr][nc] != EMPTY:
-            return False, "Target not empty"
+    if (nr, nc) == THRONE_POS and piece != KING:
+        return False, "Only king can enter throne"
 
-    if (nr, nc) == THRONE_POS and piece != KING:
-        return False, "Only king can enter throne"
+    dr = 0 if nr == r else (1 if nr > r else -1)
+    dc = 0 if nc == c else (1 if nc > c else -1)
 
-    dr = 0 if nr == r else (1 if nr > r else -1)
-    dc = 0 if nc == c else (1 if nc > c else -1)
+    cr, cc = r + dr, c + dc
+    while (cr, cc) != (nr, nc):
+        if board[cr][cc] != EMPTY:
+            return False, "Path blocked"
+        cr += dr
+        cc += dc
 
-    cr, cc = r + dr, c + dc
-    while (cr, cc) != (nr, nc):
-        if board[cr][cc] != EMPTY:
-            return False, "Path blocked"
-        cr += dr
-        cc += dc
-
-    return True, "Valid"
+    return True, "Valid"
 
 
 def is_in_sandwich(board, row, col, piece):
-    if piece == ATTACKER:
-        enemy = [DEFENDER, KING]
-    elif piece == DEFENDER:
-        enemy = [ATTACKER]
-    else:
-        return False
+    if piece == ATTACKER:
+        enemy = [DEFENDER]
+    elif piece == DEFENDER:
+        enemy = [ATTACKER]
+    else:
+        return False
 
-    if 0 <= col - 1 < SIZE and 0 <= col + 1 < SIZE:
-        if board[row][col - 1] in enemy and board[row][col + 1] in enemy:
-            return True
+    if 0 <= col - 1 < SIZE and 0 <= col + 1 < SIZE:
+        if board[row][col - 1] in enemy and board[row][col + 1] in enemy:
+            return True
 
-    if 0 <= row - 1 < SIZE and 0 <= row + 1 < SIZE:
-        if board[row - 1][col] in enemy and board[row + 1][col] in enemy:
-            return True
+    if 0 <= row - 1 < SIZE and 0 <= row + 1 < SIZE:
+        if board[row - 1][col] in enemy and board[row + 1][col] in enemy:
+            return True
 
-    return False
+    return False
 
 
 def check_capture(board, row, col):
-    current = board[row][col]
-    captured = []
+    current = board[row][col]
+    captured = []
 
-    if current == ATTACKER:
-        enemy = DEFENDER
-        friendly = [ATTACKER]
-    elif current == DEFENDER or current == KING:
-        enemy = ATTACKER
-        friendly = [DEFENDER, KING]
-    else:
-        return captured
+    if current == ATTACKER:
+        enemy = DEFENDER
+        friendly = [ATTACKER]
+    elif current == DEFENDER or current == KING:
+        enemy = ATTACKER
+        friendly = [DEFENDER]
+    else:
+        return captured
 
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    for dr, dc in directions:
-        adj_r = row + dr
-        adj_c = col + dc
-        behind_r = row + 2 * dr
-        behind_c = col + 2 * dc
+    for dr, dc in directions:
+        adj_r = row + dr
+        adj_c = col + dc
+        behind_r = row + 2 * dr
+        behind_c = col + 2 * dc
 
-        if not (0 <= adj_r < SIZE and 0 <= adj_c < SIZE):
-            continue
+        if not (0 <= adj_r < SIZE and 0 <= adj_c < SIZE):
+            continue
 
-        if board[adj_r][adj_c] != enemy:
-            continue
+        if board[adj_r][adj_c] != enemy:
+            continue
 
-        if not (0 <= behind_r < SIZE and 0 <= behind_c < SIZE):
-            continue
+        if not (0 <= behind_r < SIZE and 0 <= behind_c < SIZE):
+            continue
 
-        if (
-                board[behind_r][behind_c] in friendly
-                or (behind_r, behind_c) == THRONE_POS
-                or (behind_r, behind_c) in CORNERS
-        ):
-            captured.append((adj_r, adj_c, board[adj_r][adj_c]))
-            board[adj_r][adj_c] = EMPTY
+        if (
+                board[behind_r][behind_c] in friendly
+                or (behind_r, behind_c) == THRONE_POS
+                or (behind_r, behind_c) in CORNERS
+        ):
+            captured.append((adj_r, adj_c, board[adj_r][adj_c]))
+            board[adj_r][adj_c] = EMPTY
 
-    return captured
+    return captured
 
 
-def apply_move(board, player, r, c, nr, nc):
-    valid, msg = is_valid_move(board, player, r, c, nr, nc)
-    if not valid:
-        print(f"  Invalid: {msg}")
-        return False, []
+def apply_move(board, player, r, c, nr, nc, silent=False):
+    valid, msg = is_valid_move(board, player, r, c, nr, nc)
+    if not valid:
+        if not silent:
+            print(f"  Invalid: {msg}")
+        return False, []
 
-    piece = board[r][c]
+    piece = board[r][c]
 
-    if is_in_sandwich(board, nr, nc, piece):
-        print("  Cannot stop in sandwich!")
-        return False, []
+    if is_in_sandwich(board, nr, nc, piece):
+        if not silent:
+            print("  Cannot stop in sandwich!")
+        return False, []
 
-    board[nr][nc] = piece
-    board[r][c] = EMPTY
+    board[nr][nc] = piece
+    board[r][c] = EMPTY
 
-    captured_pieces = check_capture(board, nr, nc)
+    captured_pieces = check_capture(board, nr, nc)
 
-    for cr, cc, piece_type in captured_pieces:
-        if piece_type == ATTACKER:
-            print(f"  ✓ Attacker captured at ({cr}, {cc})!")
-        elif piece_type == DEFENDER:
-            print(f"  ✓ Defender captured at ({cr}, {cc})!")
+    for cr, cc, piece_type in captured_pieces:
+        if not silent:
+            if piece_type == ATTACKER:
+                print(f"  ✓ Attacker captured at ({cr}, {cc})!")
+            elif piece_type == DEFENDER:
+                print(f"  ✓ Defender captured at ({cr}, {cc})!")
 
-    return True, captured_pieces
+    return True, captured_pieces
 
 
 def king_escaped(board):
-    for r, c in CORNERS:
-        if board[r][c] == KING:
-            return True
-    return False
+    for r, c in CORNERS:
+        if board[r][c] == KING:
+            return True
+    return False
 
 
 def is_king_captured(board):
-    king_row = -1
-    king_col = -1
+    king_row = -1
+    king_col = -1
 
-    for r in range(SIZE):
-        for c in range(SIZE):
-            if board[r][c] == KING:
-                king_row = r
-                king_col = c
-                break
-        if king_row != -1:
-            break
+    for r in range(SIZE):
+        for c in range(SIZE):
+            if board[r][c] == KING:
+                king_row = r
+                king_col = c
+                break
+        if king_row != -1:
+            break
 
-    if king_row == -1:
-        return True
+    if king_row == -1:
+        return True
 
-    up_blocked = False
-    down_blocked = False
-    left_blocked = False
-    right_blocked = False
+    up_blocked = False
+    down_blocked = False
+    left_blocked = False
+    right_blocked = False
 
-    # UP
-    if not (0 <= king_row - 1 < SIZE):
-        up_blocked = True
-    elif board[king_row - 1][king_col] == ATTACKER:
-        up_blocked = True
-    elif (king_row - 1, king_col) == THRONE_POS:
-        up_blocked = True
-    elif (king_row - 1, king_col) in CORNERS:
-        up_blocked = True
+    # UP
+    if not (0 <= king_row - 1 < SIZE):
+        up_blocked = True
+    elif board[king_row - 1][king_col] == ATTACKER:
+        up_blocked = True
+    elif (king_row - 1, king_col) == THRONE_POS:
+        up_blocked = True
+    elif (king_row - 1, king_col) in CORNERS:
+        up_blocked = True
 
-    # DOWN
-    if not (0 <= king_row + 1 < SIZE):
-        down_blocked = True
-    elif board[king_row + 1][king_col] == ATTACKER:
-        down_blocked = True
-    elif (king_row + 1, king_col) == THRONE_POS:
-        down_blocked = True
-    elif (king_row + 1, king_col) in CORNERS:
-        down_blocked = True
+    # DOWN
+    if not (0 <= king_row + 1 < SIZE):
+        down_blocked = True
+    elif board[king_row + 1][king_col] == ATTACKER:
+        down_blocked = True
+    elif (king_row + 1, king_col) == THRONE_POS:
+        down_blocked = True
+    elif (king_row + 1, king_col) in CORNERS:
+        down_blocked = True
 
-    if not (0 <= king_col - 1 < SIZE):
-        left_blocked = True
-    elif board[king_row][king_col - 1] == ATTACKER:
-        left_blocked = True
-    elif (king_row, king_col - 1) == THRONE_POS:
-        left_blocked = True
-    elif (king_row, king_col - 1) in CORNERS:
-        left_blocked = True
+    if not (0 <= king_col - 1 < SIZE):
+        left_blocked = True
+    elif board[king_row][king_col - 1] == ATTACKER:
+        left_blocked = True
+    elif (king_row, king_col - 1) == THRONE_POS:
+        left_blocked = True
+    elif (king_row, king_col - 1) in CORNERS:
+        left_blocked = True
 
-    if not (0 <= king_col + 1 < SIZE):
-        right_blocked = True
-    elif board[king_row][king_col + 1] == ATTACKER:
-        right_blocked = True
-    elif (king_row, king_col + 1) == THRONE_POS:
-        right_blocked = True
-    elif (king_row, king_col + 1) in CORNERS:
-        right_blocked = True
+    if not (0 <= king_col + 1 < SIZE):
+        right_blocked = True
+    elif board[king_row][king_col + 1] == ATTACKER:
+        right_blocked = True
+    elif (king_row, king_col + 1) == THRONE_POS:
+        right_blocked = True
+    elif (king_row, king_col + 1) in CORNERS:
+        right_blocked = True
 
-    closed = 0
-    if up_blocked: closed += 1
-    if down_blocked: closed += 1
-    if left_blocked: closed += 1
-    if right_blocked: closed += 1
+    closed = 0
+    if up_blocked: closed += 1
+    if down_blocked: closed += 1
+    if left_blocked: closed += 1
+    if right_blocked: closed += 1
 
-    if (king_row, king_col) in CORNERS:
-        required = 2
-    elif king_row == 0 or king_row == SIZE - 1 or king_col == 0 or king_col == SIZE - 1:
-        required = 3
-    else:
-        required = 4
+    if (king_row, king_col) in CORNERS:
+        required = 2
+    elif king_row == 0 or king_row == SIZE - 1 or king_col == 0 or king_col == SIZE - 1:
+        required = 3
+    else:
+        required = 4
 
-    return closed >= required
+    return closed >= required
 
 
 def evaluate_position(board: List[List[str]], player: str) -> float:
-    attacker_count = 0
-    defender_count = 0
-    king_pos = None
+    attacker_count = 0
+    defender_count = 0
+    king_pos = None
 
-    for r in range(SIZE):
-        for c in range(SIZE):
-            piece = board[r][c]
+    for r in range(SIZE):
+        for c in range(SIZE):
+            piece = board[r][c]
 
-            if piece == ATTACKER:
-                attacker_count += 1
-            elif piece == DEFENDER:
-                defender_count += 1
-            elif piece == KING:
-                king_pos = (r, c)
+            if piece == ATTACKER:
+                attacker_count += 1
+            elif piece == DEFENDER:
+                defender_count += 1
+            elif piece == KING:
+                king_pos = (r, c)
 
-    if is_king_captured(board):
-        return 10000 if player == ATTACKER else -10000
+    if is_king_captured(board):
+        return 10000 if player == ATTACKER else -10000
 
-    if king_escaped(board):
-        return 10000 if player == DEFENDER else -10000
+    if king_escaped(board):
+        return 10000 if player == DEFENDER else -10000
 
-    if king_pos is None:
-        return 10000 if player == ATTACKER else -10000
+    if king_pos is None:
+        return 10000 if player == ATTACKER else -10000
 
-    kr, kc = king_pos
+    kr, kc = king_pos
 
-    min_corner_distance = min(
-        abs(kr - cr) + abs(kc - cc)
-        for cr, cc in CORNERS
-    )
-    king_escape_score = -min_corner_distance * 40
+    min_corner_distance = min(
+        abs(kr - cr) + abs(kc - cc)
+        for cr, cc in CORNERS
+    )
+    king_escape_score = -min_corner_distance * 40
 
-    adjacent_attackers = 0
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    adjacent_attackers = 0
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  
+    for dr, dc in directions:
+        nr, nc = kr + dr, kc + dc
+        if 0 <= nr < SIZE and 0 <= nc < SIZE:
+            if board[nr][nc] == ATTACKER:
+                adjacent_attackers += 1
 
-    for dr, dc in directions:
-        nr, nc = kr + dr, kc + dc
-        if 0 <= nr < SIZE and 0 <= nc < SIZE:
-            if board[nr][nc] == ATTACKER:
-                adjacent_attackers += 1
+    encirclement_score = adjacent_attackers * 250
 
-    encirclement_score = adjacent_attackers * 250
+    sandwich_score = 0
 
-    sandwich_score = 0
+    for r in range(SIZE):
+        for c in range(SIZE):
+            piece = board[r][c]
 
-    for r in range(SIZE):
-        for c in range(SIZE):
-            piece = board[r][c]
+            if piece == EMPTY:
+                continue
+            if (r, c) in CORNERS:
+                continue
 
-            if piece == EMPTY:
-                continue
-            if (r, c) in CORNERS:
-                continue
+            if is_in_sandwich(board, r, c, piece):
+                if piece == ATTACKER:
+                    sandwich_score -= 40
+                elif piece in (DEFENDER, KING):
+                    sandwich_score += 40
 
-            if is_in_sandwich(board, r, c, piece):
-                if piece == ATTACKER:
-                    sandwich_score -= 40
-                elif piece in (DEFENDER, KING):
-                    sandwich_score += 40
+    throne_score = 0
 
-    throne_score = 0
+    tr, tc = THRONE_POS
+    if abs(kr - tr) + abs(kc - tc) <= 1:
+        throne_score -= 30
 
-    if abs(kr - THRONE_POS[0]) + abs(kc - THRONE_POS[1]) <= 1:
-        throne_score -= 30
+    if (kr, kc) in CORNERS:
+        throne_score += 500
 
-    if (kr, kc) in CORNERS:
-        throne_score += 500
+    total_score = (
+            king_escape_score * 1.2 +
+            encirclement_score * 2.0 +
+            sandwich_score * 1.5 +
+            throne_score * 1.0
+    )
 
-    total_score = (
-            king_escape_score * 1.2 +
-            encirclement_score * 2.0 +
-            sandwich_score * 1.5 +
-            throne_score * 1.0
-    )
+    if player == DEFENDER:
+        total_score *= -1
 
-    if player == DEFENDER:
-        total_score *= -1
-
-    return total_score
-
-
-from typing import List, Tuple, Dict
-
-Piece = Tuple[int, int]
+    return total_score
 
 
 def build_piece_lists(board: List[List[str]]):
-    attackers = []
-    defenders = []
-    king = None
+    attackers = []
+    defenders = []
+    king = None
 
-    for r in range(SIZE):
-        for c in range(SIZE):
-            piece = board[r][c]
+    for r in range(SIZE):
+        for c in range(SIZE):
+            piece = board[r][c]
 
-            if piece == ATTACKER:
-                attackers.append((r, c))
+            if piece == ATTACKER:
+                attackers.append((r, c))
 
-            elif piece == DEFENDER:
-                defenders.append((r, c))
+            elif piece == DEFENDER:
+                defenders.append((r, c))
 
-            elif piece == KING:
-                king = (r, c)
+            elif piece == KING:
+                king = (r, c)
 
-    return attackers, defenders, king
+    return attackers, defenders, king
 
 
 def get_all_moves(
-        board: List[List[str]],
-        player: str,
-        pieces: List[Tuple[int, int]]
+        board: List[List[str]],
+        player: str,
+        pieces: List[Tuple[int, int]]
 ) -> List[Tuple[int, int, int, int]]:
-    moves = []
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    moves = []
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    for r, c in pieces:
-        piece = board[r][c]
+    for r, c in pieces:
+        piece = board[r][c]
 
-        if player == ATTACKER and piece != ATTACKER:
-            continue
-        if player == DEFENDER and piece not in (DEFENDER, KING):
-            continue
+        if player == ATTACKER and piece != ATTACKER:
+            continue
+        if player == DEFENDER and piece not in (DEFENDER, KING):
+            continue
 
-        for dr, dc in directions:
-            nr, nc = r + dr, c + dc
+        for dr, dc in directions:
+            nr, nc = r + dr, c + dc
 
-            while 0 <= nr < SIZE and 0 <= nc < SIZE and board[nr][nc] == EMPTY:
-                moves.append((r, c, nr, nc))
-                nr += dr
-                nc += dc
+            while 0 <= nr < SIZE and 0 <= nc < SIZE and board[nr][nc] == EMPTY:
+                moves.append((r, c, nr, nc))
+                nr += dr
+                nc += dc
 
-    return moves
+    return moves
 
 
 def _board_to_hash(board: List[List[str]]) -> int:
-    return hash(tuple(tuple(row) for row in board))
+    return hash(tuple(tuple(row) for row in board))
 
 
-def undo_move(board, r, c, nr, nc, captured_pieces):
-    piece = board[nr][nc]
+def undo_move(board, r, c, nr, nc, captured_pieces, silent=False):
+    piece = board[nr][nc]
 
-    board[r][c] = piece
-    board[nr][nc] = EMPTY
+    board[r][c] = piece
+    board[nr][nc] = EMPTY
 
-    for cr, cc, piece_type in captured_pieces:
-        board[cr][cc] = piece_type
-
-        if piece_type == ATTACKER:
-            print(f"  ✓ Attacker restored at ({cr}, {cc})!")
-        elif piece_type == DEFENDER:
-            print(f"  ✓ Defender restored at ({cr}, {cc})!")
+    for cr, cc, piece_type in captured_pieces:
+        board[cr][cc] = piece_type
+        if not silent:
+            if piece_type == ATTACKER:
+                print(f"  ✓ Attacker restored at ({cr}, {cc})!")
+            elif piece_type == DEFENDER:
+                print(f"  ✓ Defender restored at ({cr}, {cc})!")
 
 
 class HnefataflAI:
 
-    def __init__(self, difficulty: int = DIFFICULTY_MEDIUM):
-        self.difficulty = difficulty
-        self.nodes_evaluated = 0
-        self.nodes_pruned = 0
-        self.transposition_table = {}
-        self.tt_hits = 0
+    def __init__(self, difficulty: int = DIFFICULTY_MEDIUM):
+        self.difficulty = difficulty
+        self.nodes_evaluated = 0
+        self.nodes_pruned = 0
+        self.transposition_table = {}
+        self.tt_hits = 0
 
-    def get_best_move(self, board, player):
-        self.nodes_evaluated = 0
-        self.nodes_pruned = 0
-        self.transposition_table.clear()
-        self.tt_hits = 0
+    def get_best_move(self, board, player):
+        self.nodes_evaluated = 0
+        self.nodes_pruned = 0
+        self.transposition_table.clear()
+        self.tt_hits = 0
 
-        attackers, defenders, king = build_piece_lists(board)
-        pieces = (
-            attackers if player == ATTACKER
-            else defenders + ([king] if king else [])
-        )
+        attackers, defenders, king = build_piece_lists(board)
+        pieces = (
+            attackers if player == ATTACKER
+            else defenders + ([king] if king else [])
+        )
 
-        valid_moves = get_all_moves(board, player, pieces)
-        if not valid_moves:
-            return None
+        valid_moves = get_all_moves(board, player, pieces)
+        if not valid_moves:
+            return None
 
-        best_move = None
-        best_value = float('-inf')
-        opponent = DEFENDER if player == ATTACKER else ATTACKER
+        best_move = None
+        best_value = float('-inf')
+        opponent = DEFENDER if player == ATTACKER else ATTACKER
 
-        for move in valid_moves:
-            from_r, from_c, to_r, to_c = move
+        for move in valid_moves:
+            from_r, from_c, to_r, to_c = move
 
-            success, captured_pieces = apply_move(
-                board, player, from_r, from_c, to_r, to_c
-            )
-            if not success:
-                continue
+            success, captured_pieces = apply_move(
+                board, player, from_r, from_c, to_r, to_c, silent=True
+            )
+            if not success:
+                continue
+            value = self._alpha_beta(
+                board,
+                self.difficulty - 1,
+                float('-inf'), float('inf'),
+                is_maximizing=False,
+                current_player=opponent,
+                root_player=player
+            )
+            undo_move(board, from_r, from_c, to_r, to_c, captured_pieces, silent=True)
+            if value > best_value:
+                best_value = value
+                best_move = move
+        return best_move
+    def _alpha_beta(
+            self,
+            board: List[List[str]],
+            depth: int,
+            alpha: float,
+            beta: float,
+            is_maximizing: bool,
+            current_player: str,
+            root_player: str
+    ) -> float:
 
-            value = self._alpha_beta(
-                board,
-                self.difficulty - 1,
-                float('-inf'),
-                float('inf'),
-                is_maximizing=False,
-                current_player=opponent,
-                root_player=player
-            )
+        board_hash = _board_to_hash(board)
 
-            undo_move(board, from_r, from_c, to_r, to_c, captured_pieces)
+        if board_hash in self.transposition_table:
+            cached_depth, cached_value, cached_flag = self.transposition_table[board_hash]
+            if cached_depth >= depth:
+                self.tt_hits += 1
+                if cached_flag == TT_EXACT:
+                    return cached_value
+                elif cached_flag == TT_LOWER:
+                    alpha = max(alpha, cached_value)
+                elif cached_flag == TT_UPPER:
+                    beta = min(beta, cached_value)
+                if alpha >= beta:
+                    return cached_value
 
-            if value > best_value:
-                best_value = value
-                best_move = move
+        self.nodes_evaluated += 1
 
-        return best_move
+        if depth == 0:
+            result = evaluate_position(board, root_player)
+            self.transposition_table[board_hash] = (depth, result, TT_EXACT)
+            return result
 
-    def _alpha_beta(
-            self,
-            board: List[List[str]],
-            depth: int,
-            alpha: float,
-            beta: float,
-            is_maximizing: bool,
-            current_player: str,
-            root_player: str
-    ) -> float:
+        opponent = DEFENDER if current_player == ATTACKER else ATTACKER
 
-        board_hash = _board_to_hash(board)
+        attackers, defenders, king = build_piece_lists(board)
+        pieces = (
+            attackers if current_player == ATTACKER
+            else defenders + ([king] if king else [])
+        )
 
-        if board_hash in self.transposition_table:
-            cached_depth, cached_value, cached_flag = self.transposition_table[board_hash]
-            if cached_depth >= depth:
-                self.tt_hits += 1
-                if cached_flag == TT_EXACT:
-                    return cached_value
-                elif cached_flag == TT_LOWER:
-                    alpha = max(alpha, cached_value)
-                elif cached_flag == TT_UPPER:
-                    beta = min(beta, cached_value)
-                if alpha >= beta:
-                    return cached_value
+        if is_maximizing:
+            max_eval = float('-inf')
+            original_alpha = alpha
 
-        self.nodes_evaluated += 1
+            moves = get_all_moves(board, current_player, pieces)
 
-        if depth == 0:
-            result = evaluate_position(board, root_player)
-            self.transposition_table[board_hash] = (depth, result, TT_EXACT)
-            return result
+            if not moves:
+                result = evaluate_position(board, root_player)
+                self.transposition_table[board_hash] = (depth, result, TT_EXACT)
+                return result
 
-        opponent = DEFENDER if current_player == ATTACKER else ATTACKER
+            for move in moves:
+                from_r, from_c, to_r, to_c = move
 
-        attackers, defenders, king = build_piece_lists(board)
-        pieces = (
-            attackers if current_player == ATTACKER
-            else defenders + ([king] if king else [])
-        )
+                success, captured_pieces = apply_move(
+                    board, current_player, from_r, from_c, to_r, to_c, silent=True
+                )
+                if not success:
+                    continue
 
-        if is_maximizing:
-            max_eval = float('-inf')
-            original_alpha = alpha
+                eval_value = self._alpha_beta(
+                    board, depth - 1, alpha, beta,
+                    is_maximizing=False,
+                    current_player=opponent,
+                    root_player=root_player
+                )
 
-            moves = get_all_moves(board, current_player, pieces)
+                undo_move(board, from_r, from_c, to_r, to_c, captured_pieces, silent=True)
 
-            if not moves:
-                result = evaluate_position(board, root_player)
-                self.transposition_table[board_hash] = (depth, result, TT_EXACT)
-                return result
+                max_eval = max(max_eval, eval_value)
+                alpha = max(alpha, eval_value)
 
-            for move in moves:
-                from_r, from_c, to_r, to_c = move
+                if alpha >= beta:
+                    self.nodes_pruned += 1
+                    break
 
-                success, captured_pieces = apply_move(
-                    board, current_player, from_r, from_c, to_r, to_c
-                )
-                if not success:
-                    continue
+            flag = TT_EXACT if max_eval > original_alpha else TT_UPPER
+            self.transposition_table[board_hash] = (depth, max_eval, flag)
+            return max_eval
 
-                eval_value = self._alpha_beta(
-                    board, depth - 1, alpha, beta,
-                    is_maximizing=False,
-                    current_player=opponent,
-                    root_player=root_player
-                )
+        else:
+            min_eval = float('inf')
+            original_beta = beta
 
-                undo_move(board, from_r, from_c, to_r, to_c, captured_pieces)
+            moves = get_all_moves(board, current_player, pieces)
 
-                max_eval = max(max_eval, eval_value)
-                alpha = max(alpha, eval_value)
+            if not moves:
+                result = evaluate_position(board, root_player)
+                self.transposition_table[board_hash] = (depth, result, TT_EXACT)
+                return result
 
-                if alpha >= beta:
-                    self.nodes_pruned += 1
-                    break
+            for move in moves:
+                from_r, from_c, to_r, to_c = move
 
-            flag = TT_EXACT if max_eval > original_alpha else TT_UPPER
-            self.transposition_table[board_hash] = (depth, max_eval, flag)
-            return max_eval
+                success, captured_pieces = apply_move(
+                    board, current_player, from_r, from_c, to_r, to_c, silent=True
+                )
+                if not success:
+                    continue
 
-        else:
-            min_eval = float('inf')
-            original_beta = beta
+                eval_value = self._alpha_beta(
+                    board, depth - 1, alpha, beta,
+                    is_maximizing=True,
+                    current_player=opponent,
+                    root_player=root_player
+                )
 
-            moves = get_all_moves(board, current_player, pieces)
+                undo_move(board, from_r, from_c, to_r, to_c, captured_pieces, silent=True)
 
-            if not moves:
-                result = evaluate_position(board, root_player)
-                self.transposition_table[board_hash] = (depth, result, TT_EXACT)
-                return result
+                min_eval = min(min_eval, eval_value)
+                beta = min(beta, eval_value)
 
-            for move in moves:
-                from_r, from_c, to_r, to_c = move
+                if alpha >= beta:
+                    self.nodes_pruned += 1
+                    break
 
-                success, captured_pieces = apply_move(
-                    board, current_player, from_r, from_c, to_r, to_c
-                )
-                if not success:
-                    continue
+            flag = TT_EXACT if min_eval < original_beta else TT_LOWER
+            self.transposition_table[board_hash] = (depth, min_eval, flag)
+            return min_eval
 
-                eval_value = self._alpha_beta(
-                    board, depth - 1, alpha, beta,
-                    is_maximizing=True,
-                    current_player=opponent,
-                    root_player=root_player
-                )
-
-                undo_move(board, from_r, from_c, to_r, to_c, captured_pieces)
-
-                min_eval = min(min_eval, eval_value)
-                beta = min(beta, eval_value)
-
-                if alpha >= beta:
-                    self.nodes_pruned += 1
-                    break
-
-            flag = TT_EXACT if min_eval < original_beta else TT_LOWER
-            self.transposition_table[board_hash] = (depth, min_eval, flag)
-            return min_eval
-
-    # for testing purpose ana saybaha 4waya
-    def get_statistics(self) -> dict:
-        return {
-            "nodes_evaluated": self.nodes_evaluated,
-            "nodes_pruned": self.nodes_pruned,
-            "transposition_hits": self.tt_hits,
-            "transposition_table_size": len(self.transposition_table),
-            "pruning_efficiency": (
-                self.nodes_pruned / self.nodes_evaluated
-                if self.nodes_evaluated > 0 else 0
-            )
-        }
+    def get_statistics(self) -> dict:
+        return {
+            "nodes_evaluated": self.nodes_evaluated,
+            "nodes_pruned": self.nodes_pruned,
+            "transposition_hits": self.tt_hits,
+            "transposition_table_size": len(self.transposition_table),
+            "pruning_efficiency": (
+                self.nodes_pruned / self.nodes_evaluated
+                if self.nodes_evaluated > 0 else 0
+            )
+        }
 
 
 def Game_Controller():
-    board = create_board()
-    turn = ATTACKER
+    """
+    Original human vs human game mode.
+    """
+    board = create_board()
+    turn = ATTACKER
 
-    print("\n" + "=" * 60)
-    print("HNEFATAFL: Human vs Human")
-    print("=" * 60 + "\n")
+    print("\n" + "=" * 60)
+    print("HNEFATAFL: Human vs Human")
+    print("=" * 60 + "\n")
 
-    while True:
-        print_board(board)
+    while True:
+        print_board(board)
 
-        print(f"\n--- {('Attacker (Black)' if turn == ATTACKER else 'Defender (White)')} Turn ---")
+        print(f"\n--- {('Attacker (Black)' if turn == ATTACKER else 'Defender (White)')} Turn ---")
 
-        try:
-            r = int(input("Start row: "))
-            c = int(input("Start col: "))
-            nr = int(input("End row: "))
-            nc = int(input("End col: "))
-        except:
-            print("Invalid input!")
-            continue
+        try:
+            r = int(input("Start row: "))
+            c = int(input("Start col: "))
+            nr = int(input("End row: "))
+            nc = int(input("End col: "))
+        except:
+            print("Invalid input!")
+            continue
 
-        if not apply_move(board, turn, r, c, nr, nc):
-            continue
+        if not apply_move(board, turn, r, c, nr, nc):
+            continue
 
-        if king_escaped(board):
-            print_board(board)
-            print("\n" + "=" * 60)
-            print("🏆 Defenders Win! King Escaped!")
-            print("=" * 60)
-            break
+        if king_escaped(board):
+            print_board(board)
+            print("\n" + "=" * 60)
+            print("🏆 Defenders Win! King Escaped!")
+            print("=" * 60)
+            break
 
-        if is_king_captured(board):
-            print_board(board)
-            print("\n" + "=" * 60)
-            print("🏆 Attackers Win! King Captured!")
-            print("=" * 60)
-            break
+        if is_king_captured(board):
+            print_board(board)
+            print("\n" + "=" * 60)
+            print("🏆 Attackers Win! King Captured!")
+            print("=" * 60)
+            break
 
-        turn = DEFENDER if turn == ATTACKER else ATTACKER
+        turn = DEFENDER if turn == ATTACKER else ATTACKER
 
 
 def Game_Controller_With_AI(ai_player: str = ATTACKER, difficulty: int = DIFFICULTY_MEDIUM):
-    board = create_board()
-    turn = ATTACKER
+    """
+    Human vs AI game mode.
 
-    ai = HnefataflAI(difficulty=difficulty)
+    Args:
+        ai_player: ATTACKER or DEFENDER (which side AI plays)
+        difficulty: DIFFICULTY_EASY (1), DIFFICULTY_MEDIUM (3), or DIFFICULTY_HARD (5)
+    """
+    board = create_board()
+    turn = ATTACKER
 
-    difficulty_name = {
-        DIFFICULTY_EASY: "Easy",
-        DIFFICULTY_MEDIUM: "Medium",
-        DIFFICULTY_HARD: "Hard"
-    }
+    # Initialize AI with chosen difficulty
+    ai = HnefataflAI(difficulty=difficulty)
 
-    player_name = "Attacker (Black)" if ai_player == ATTACKER else "Defender (White)"
-    human_name = "Defender (White)" if ai_player == ATTACKER else "Attacker (Black)"
+    difficulty_name = {
+        DIFFICULTY_EASY: "Easy",
+        DIFFICULTY_MEDIUM: "Medium",
+        DIFFICULTY_HARD: "Hard"
+    }
 
-    print("\n" + "=" * 60)
-    print(f"HNEFATAFL: Human vs AI ({difficulty_name[difficulty]})")
-    print(f"AI playing as: {player_name}")
-    print(f"You playing as: {human_name}")
-    print("=" * 60 + "\n")
+    player_name = "Attacker (Black)" if ai_player == ATTACKER else "Defender (White)"
+    human_name = "Defender (White)" if ai_player == ATTACKER else "Attacker (Black)"
 
-    while True:
-        print_board(board)
+    print("\n" + "=" * 60)
+    print(f"HNEFATAFL: Human vs AI ({difficulty_name[difficulty]})")
+    print(f"AI playing as: {player_name}")
+    print(f"You playing as: {human_name}")
+    print("=" * 60 + "\n")
 
-        if king_escaped(board):
-            print("\n" + "=" * 60)
-            print("🏆 Defenders Win! King Escaped!")
-            print("=" * 60)
-            break
+    while True:
+        print_board(board)
 
-        if is_king_captured(board):
-            print("\n" + "=" * 60)
-            print("🏆 Attackers Win! King Captured!")
-            print("=" * 60)
-            break
+        # Check win conditions
+        if king_escaped(board):
+            print("\n" + "=" * 60)
+            print("🏆 Defenders Win! King Escaped!")
+            print("=" * 60)
+            break
 
-        print(f"\n--- {('Attacker (Black)' if turn == ATTACKER else 'Defender (White)')} Turn ---")
+        if is_king_captured(board):
+            print("\n" + "=" * 60)
+            print("🏆 Attackers Win! King Captured!")
+            print("=" * 60)
+            break
 
-        if turn == ai_player:
+        print(f"\n--- {('Attacker (Black)' if turn == ATTACKER else 'Defender (White)')} Turn ---")
 
-            print("AI is thinking...")
-            move = ai.get_best_move(board, turn)
+        # Determine if AI or human turn
+        if turn == ai_player:
+            # AI TURN
+            print("AI is thinking...")
+            move = ai.get_best_move(board, turn)
 
-            if move is None:
-                print("No valid moves available!")
-                turn = DEFENDER if turn == ATTACKER else ATTACKER
-                continue
+            if move is None:
+                print("No valid moves available!")
+                turn = DEFENDER if turn == ATTACKER else ATTACKER
+                continue
 
-            from_r, from_c, to_r, to_c = move
-            print(f"AI moves from ({from_r}, {from_c}) to ({to_r}, {to_c})")
+            from_r, from_c, to_r, to_c = move
+            print(f"AI moves from ({from_r}, {from_c}) to ({to_r}, {to_c})")
 
-            apply_move(board, turn, from_r, from_c, to_r, to_c)
+            # Apply move for real (not silent) to print captures
+            apply_move(board, turn, from_r, from_c, to_r, to_c, silent=False)
 
-        else:
-            try:
-                r = int(input("Start row: "))
-                c = int(input("Start col: "))
-                nr = int(input("End row: "))
-                nc = int(input("End col: "))
-            except:
-                print("Invalid input!")
-                continue
+        else:
+            try:
+                r = int(input("Start row: "))
+                c = int(input("Start col: "))
+                nr = int(input("End row: "))
+                nc = int(input("End col: "))
+            except:
+                print("Invalid input!")
+                continue
 
-            if not apply_move(board, turn, r, c, nr, nc):
-                continue
+            if not apply_move(board, turn, r, c, nr, nc, silent=False):
+                continue
 
-        turn = DEFENDER if turn == ATTACKER else ATTACKER
+        turn = DEFENDER if turn == ATTACKER else ATTACKER
 
+
+# ============================================================================
+# MAIN MENU & ENTRY POINT
+# ============================================================================
 
 def main():
-    """Main menu for game mode selection."""
-    print("\n" + "=" * 60)
-    print("HNEFATAFL: Viking Chess with AI")
-    print("=" * 60)
-    print("\nGame Modes:")
-    print("1. Human vs Human")
-    print("2. Human vs AI (you play as Attacker)")
-    print("3. Human vs AI (you play as Defender)")
+    """Main menu for game mode selection."""
+    print("\n" + "=" * 60)
+    print("HNEFATAFL: Viking Chess with AI")
+    print("=" * 60)
+    print("\nGame Modes:")
+    print("1. Human vs Human")
+    print("2. Human vs AI (you play as Attacker)")
+    print("3. Human vs AI (you play as Defender)")
 
-    choice = input("\nSelect mode (1-3): ").strip()
+    choice = input("\nSelect mode (1-3): ").strip()
 
-    if choice == "1":
-        Game_Controller()
+    if choice == "1":
+        Game_Controller()
 
-    elif choice == "2":
-        difficulty_input = input("AI Difficulty (1=Easy, 3=Medium, 5=Hard): ").strip()
-        difficulty = int(difficulty_input) if difficulty_input in ['1', '3', '5'] else DIFFICULTY_MEDIUM
-        Game_Controller_With_AI(ai_player=ATTACKER, difficulty=difficulty)
+    elif choice == "2":
+        difficulty_input = input("AI Difficulty (1=Easy, 3=Medium, 5=Hard): ").strip()
+        difficulty = int(difficulty_input) if difficulty_input in ['1', '3', '5'] else DIFFICULTY_MEDIUM
+        Game_Controller_With_AI(ai_player=DEFENDER, difficulty=difficulty)
 
-    elif choice == "3":
-        difficulty_input = input("AI Difficulty (1=Easy, 3=Medium, 5=Hard): ").strip()
-        difficulty = int(difficulty_input) if difficulty_input in ['1', '3', '5'] else DIFFICULTY_MEDIUM
-        Game_Controller_With_AI(ai_player=DEFENDER, difficulty=difficulty)
+    elif choice == "3":
+        difficulty_input = input("AI Difficulty (1=Easy, 3=Medium, 5=Hard): ").strip()
+        difficulty = int(difficulty_input) if difficulty_input in ['1', '3', '5'] else DIFFICULTY_MEDIUM
+        Game_Controller_With_AI(ai_player=ATTACKER, difficulty=difficulty)
 
-    else:
-        print("Invalid choice!")
-
+    else:
+        print("Invalid choice!")
 
 if __name__ == "__main__":
-    main()
+    main()
