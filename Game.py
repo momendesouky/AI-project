@@ -1,6 +1,5 @@
 import copy
 
-# ---------------- CONSTANTS ----------------
 EMPTY = '.'
 ATTACKER = 'A'
 DEFENDER = 'D'
