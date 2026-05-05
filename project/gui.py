@@ -2,7 +2,7 @@ import pygame
 import copy
 import os
 
-from part1_2_3 import (
+from prolog_engine import (
     create_board,
     apply_move,
     is_valid_move,
