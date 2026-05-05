@@ -386,8 +386,6 @@ def get_all_moves(
             nr, nc = r + dr, c + dc
 
             while 0 <= nr < SIZE and 0 <= nc < SIZE:
-                # Normal pieces can move only to EMPTY cells.
-                # The KING can also move to CORNER cells to escape.
                 if board[nr][nc] == EMPTY:
                     moves.append((r, c, nr, nc))
                 elif piece == KING and (nr, nc) in CORNERS:
@@ -411,8 +409,6 @@ def undo_move(board, r, c, nr, nc, captured_pieces, silent=True):
 
     board[r][c] = piece
 
-    # If the destination was a corner, restore it as CORNER after undo.
-    # Otherwise it becomes EMPTY.
     if (nr, nc) in CORNERS:
         board[nr][nc] = CORNER
     else:
@@ -529,11 +525,9 @@ class HnefataflAI:
             max_eval = float('-inf')
             original_alpha = alpha
 
-            # BUG 5 FIX: pass pieces list instead of opponent string
             moves = get_all_moves(board, current_player, pieces)
 
             if not moves:
-                # BUG 8 FIX: use root_player not current_player
                 result = evaluate_position(board, root_player)
                 self.transposition_table[board_hash] = (depth, result, TT_EXACT)
                 return result
@@ -541,7 +535,6 @@ class HnefataflAI:
             for move in moves:
                 from_r, from_c, to_r, to_c = move
 
-                # BUG 6 FIX: use apply_move with correct signature
                 success, captured_pieces = apply_move(
                     board, current_player, from_r, from_c, to_r, to_c,
                 silent=True)
@@ -554,8 +547,7 @@ class HnefataflAI:
                     current_player=opponent,
                     root_player=root_player
                 )
-
-                # BUG 7 FIX: pass captured_pieces not old captured
+                
                 undo_move(board, from_r, from_c, to_r, to_c, captured_pieces)
 
                 max_eval = max(max_eval, eval_value)
@@ -565,7 +557,6 @@ class HnefataflAI:
                     self.nodes_pruned += 1
                     break
 
-            # BUG 9 FIX: store with correct flag
             flag = TT_EXACT if max_eval > original_alpha else TT_UPPER
             self.transposition_table[board_hash] = (depth, max_eval, flag)
             return max_eval
@@ -574,19 +565,17 @@ class HnefataflAI:
             min_eval = float('inf')
             original_beta = beta
 
-            # BUG 10 FIX: pass pieces list to get_all_moves
             moves = get_all_moves(board, current_player, pieces)
 
             if not moves:
                 result = evaluate_position(board, root_player)
-                # BUG 13 FIX: store with flag
+                
                 self.transposition_table[board_hash] = (depth, result, TT_EXACT)
                 return result
 
             for move in moves:
                 from_r, from_c, to_r, to_c = move
 
-                # BUG 11 FIX: use current_player not undefined player
                 success, captured_pieces = apply_move(
                     board, current_player, from_r, from_c, to_r, to_c,silent=True
                 )
@@ -609,13 +598,11 @@ class HnefataflAI:
                     self.nodes_pruned += 1
                     break
 
-            # BUG 14 FIX: store with correct flag
             flag = TT_EXACT if min_eval < original_beta else TT_LOWER
             self.transposition_table[board_hash] = (depth, min_eval, flag)
             return min_eval
 
 
-    # for testing purpose ana saybaha 4waya
     def get_statistics(self) -> dict:
         return {
             "nodes_evaluated": self.nodes_evaluated,
@@ -685,7 +672,6 @@ def Game_Controller_With_AI(ai_player: str = ATTACKER, difficulty: int = DIFFICU
     board = create_board()
     turn = ATTACKER
 
-    # Initialize AI with chosen difficulty
     ai = HnefataflAI(difficulty=difficulty)
 
     difficulty_name = {
@@ -706,7 +692,6 @@ def Game_Controller_With_AI(ai_player: str = ATTACKER, difficulty: int = DIFFICU
     while True:
         print_board(board)
 
-        # Check win conditions
         if king_escaped(board):
             print("\n" + "=" * 60)
             print(" Defenders Win! King Escaped!")
@@ -721,9 +706,8 @@ def Game_Controller_With_AI(ai_player: str = ATTACKER, difficulty: int = DIFFICU
 
         print(f"\n--- {('Attacker (Black)' if turn == ATTACKER else 'Defender (White)')} Turn ---")
 
-        # Determine if AI or human turn
         if turn == ai_player:
-            # AI Turn
+
             print("AI is thinking...")
             move = ai.get_best_move(board, turn)
 
