@@ -167,7 +167,10 @@ def check_capture(board, row, col):
 
         if (
                 board[behind_r][behind_c] in friendly
-                or (behind_r, behind_c) in CORNERS
+                or (
+                    (behind_r, behind_c) in CORNERS
+                    and current != KING
+                )
                 or (
                     (behind_r, behind_c) == THRONE_POS
                     and current != KING  
