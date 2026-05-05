@@ -112,7 +112,7 @@ def is_valid_move(board, player, r, c, nr, nc):
 
 def is_in_sandwich(board, row, col, piece):
     if piece == ATTACKER:
-        enemy = [DEFENDER, KING]
+        enemy = [DEFENDER]
     elif piece == DEFENDER:
         enemy = [ATTACKER]
     else:
