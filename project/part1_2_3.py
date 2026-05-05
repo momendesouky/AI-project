@@ -136,9 +136,12 @@ def check_capture(board, row, col):
     if current == ATTACKER:
         enemy = DEFENDER
         friendly = [ATTACKER]
-    elif current == DEFENDER or current == KING:
+    elif current == DEFENDER:
         enemy = ATTACKER
-        friendly = [DEFENDER, KING]
+        friendly = [DEFENDER]
+    elif current == KING:
+        enemy = ATTACKER
+        friendly = []    
     else:
         return captured
 
@@ -157,6 +160,9 @@ def check_capture(board, row, col):
             continue
 
         if not (0 <= behind_r < SIZE and 0 <= behind_c < SIZE):
+            continue
+
+        if board[adj_r][adj_c] == KING:
             continue
 
         if (
@@ -192,9 +198,9 @@ def apply_move(board, player, r, c, nr, nc, silent=False):
     if not silent:
         for cr, cc, piece_type in captured_pieces:
             if piece_type == ATTACKER:
-                print(f"  ✓ Attacker captured at ({cr}, {cc})!")
+                print(f"   Attacker captured at ({cr}, {cc})!")
             elif piece_type == DEFENDER:
-                print(f"  ✓ Defender captured at ({cr}, {cc})!")
+                print(f"   Defender captured at ({cr}, {cc})!")
 
     return True, captured_pieces
 
@@ -205,80 +211,46 @@ def king_escaped(board):
     return False
 
 
+
 def is_king_captured(board):
-    king_row = -1
-    king_col = -1
+    king_pos = None
 
     for r in range(SIZE):
         for c in range(SIZE):
             if board[r][c] == KING:
-                king_row = r
-                king_col = c
+                king_pos = (r, c)
                 break
-        if king_row != -1:
+        if king_pos:
             break
 
-    if king_row == -1:
+    if not king_pos:
         return True
 
-    up_blocked = False
-    down_blocked = False
-    left_blocked = False
-    right_blocked = False
+    r, c = king_pos
 
-    # UP
-    if not (0 <= king_row - 1 < SIZE):
-        up_blocked = True
-    elif board[king_row - 1][king_col] == ATTACKER:
-        up_blocked = True
-    elif (king_row - 1, king_col) == THRONE_POS:
-        up_blocked = True
-    elif (king_row - 1, king_col) in CORNERS:
-        up_blocked = True
+    directions = [(-1,0),(1,0),(0,-1),(0,1)]
 
-    # DOWN
-    if not (0 <= king_row + 1 < SIZE):
-        down_blocked = True
-    elif board[king_row + 1][king_col] == ATTACKER:
-        down_blocked = True
-    elif (king_row + 1, king_col) == THRONE_POS:
-        down_blocked = True
-    elif (king_row + 1, king_col) in CORNERS:
-        down_blocked = True
+    block_count = 0
 
-    if not (0 <= king_col - 1 < SIZE):
-        left_blocked = True
-    elif board[king_row][king_col - 1] == ATTACKER:
-        left_blocked = True
-    elif (king_row, king_col - 1) == THRONE_POS:
-        left_blocked = True
-    elif (king_row, king_col - 1) in CORNERS:
-        left_blocked = True
+    for dr, dc in directions:
+        nr, nc = r + dr, c + dc
 
-    if not (0 <= king_col + 1 < SIZE):
-        right_blocked = True
-    elif board[king_row][king_col + 1] == ATTACKER:
-        right_blocked = True
-    elif (king_row, king_col + 1) == THRONE_POS:
-        right_blocked = True
-    elif (king_row, king_col + 1) in CORNERS:
-        right_blocked = True
+        if 0 <= nr < SIZE and 0 <= nc < SIZE:
 
-    closed = 0
-    if up_blocked: closed += 1
-    if down_blocked: closed += 1
-    if left_blocked: closed += 1
-    if right_blocked: closed += 1
+            if board[nr][nc] == ATTACKER:
+                block_count += 1
 
-    if (king_row, king_col) in CORNERS:
+            elif (nr, nc) in CORNERS:
+                block_count += 1
+
+    if (r, c) in CORNERS:
         required = 2
-    elif king_row == 0 or king_row == SIZE - 1 or king_col == 0 or king_col == SIZE - 1:
+    elif r == 0 or r == SIZE-1 or c == 0 or c == SIZE-1:
         required = 3
     else:
         required = 4
 
-    return closed >= required
-
+    return block_count >= required
 
 def evaluate_position(board: List[List[str]], player: str) -> float:
     attacker_count = 0
@@ -682,14 +654,14 @@ def Game_Controller():
         if king_escaped(board):
             print_board(board)
             print("\n" + "=" * 60)
-            print("🏆 Defenders Win! King Escaped!")
+            print(" Defenders Win! King Escaped!")
             print("=" * 60)
             break
 
         if is_king_captured(board):
             print_board(board)
             print("\n" + "=" * 60)
-            print("🏆 Attackers Win! King Captured!")
+            print(" Attackers Win! King Captured!")
             print("=" * 60)
             break
 
@@ -731,13 +703,13 @@ def Game_Controller_With_AI(ai_player: str = ATTACKER, difficulty: int = DIFFICU
         # Check win conditions
         if king_escaped(board):
             print("\n" + "=" * 60)
-            print("🏆 Defenders Win! King Escaped!")
+            print(" Defenders Win! King Escaped!")
             print("=" * 60)
             break
 
         if is_king_captured(board):
             print("\n" + "=" * 60)
-            print("🏆 Attackers Win! King Captured!")
+            print(" Attackers Win! King Captured!")
             print("=" * 60)
             break
 
