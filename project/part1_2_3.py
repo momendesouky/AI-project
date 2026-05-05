@@ -167,8 +167,11 @@ def check_capture(board, row, col):
 
         if (
                 board[behind_r][behind_c] in friendly
-                or (behind_r, behind_c) == THRONE_POS
                 or (behind_r, behind_c) in CORNERS
+                or (
+                    (behind_r, behind_c) == THRONE_POS
+                    and current != KING  
+                )
         ):
             captured.append((adj_r, adj_c, board[adj_r][adj_c]))
             board[adj_r][adj_c] = EMPTY
@@ -417,9 +420,9 @@ def undo_move(board, r, c, nr, nc, captured_pieces, silent=True):
 
         if not silent:
             if piece_type == ATTACKER:
-                print(f"  ✓ Attacker restored at ({cr}, {cc})!")
+                print(f"   Attacker restored at ({cr}, {cc})!")
             elif piece_type == DEFENDER:
-                print(f"  ✓ Defender restored at ({cr}, {cc})!")
+                print(f"   Defender restored at ({cr}, {cc})!")
 
 
 class HnefataflAI:
