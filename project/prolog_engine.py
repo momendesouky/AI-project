@@ -11,8 +11,8 @@ THRONE_POS = (5, 5)
 CORNERS = [(0, 0), (0, 10), (10, 0), (10, 10)]
 
 DIFFICULTY_EASY = 1
-DIFFICULTY_MEDIUM = 2
-DIFFICULTY_HARD = 3
+DIFFICULTY_MEDIUM = 3
+DIFFICULTY_HARD = 5
 
 prolog = Prolog()
 prolog.consult("hnefatafl_logic.pl")
