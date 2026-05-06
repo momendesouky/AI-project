@@ -320,18 +320,16 @@ evaluate(Board,Player,Value) :-
     adjacent_attackers(Board,KR,KC,Adj),
     EncircleScore is Adj * 250,
     sandwich_score(Board,SandwichScore),
-    (
-        throne(TR,TC),
-        manhattan(KR,KC,TR,TC,TD),
-        TD =< 1
-        -> ThroneScore1 = -30
-        ; ThroneScore1 = 0
-    ),
-    (
-        corner_pos(KR,KC)
-        -> ThroneScore is ThroneScore1 + 500
-        ; ThroneScore is ThroneScore1
-    ),
+    
+   (throne(TR,TC), manhattan(KR,KC,TR,TC,TD), TD =< 1 
+    -> ThroneScore1 = 100       
+    ; ThroneScore1 = 0           
+),
+( corner_pos(KR,KC) 
+    -> ThroneScore is ThroneScore1 + 500 
+    ; ThroneScore is ThroneScore1        
+)
+
     Raw is KingEscapeScore * 1.2 + EncircleScore * 2.0 + SandwichScore * 1.5 + ThroneScore,
     (Player = d -> Value is -Raw ; Value is Raw).
 
