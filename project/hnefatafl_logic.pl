@@ -336,12 +336,15 @@ evaluate(Board,Player,Value) :-
 terminal(Board) :-
     king_escaped(Board);
     king_captured(Board).
-
+    
 best_move(Board,Player,Depth,BestMove,BestValue) :-
     all_moves(Board,Player,Moves),
-    Moves \= [],
-    alpha_beta_root(Board,Player,Depth,Moves,none,-1000000,BestMove,BestValue).
-
+    (   Moves == []
+    ->  BestMove = pass,
+        evaluate(Board,Player,BestValue)
+    ;   alpha_beta_root(Board,Player,Depth,Moves,none,-1000000,BestMove,BestValue)
+    ).
+    
 alpha_beta_root(_,_,_,[],BestMove,BestValue,BestMove,BestValue).
 
 alpha_beta_root(Board,Player,Depth,[move(R,C,NR,NC)|Rest],CurrentBest,CurrentVal,BestMove,BestValue) :-
